@@ -1,0 +1,2 @@
+sudo systemctl stop web-ruby
+MYSQL_QUERY_LOGGER=1 bundle exec rackup
