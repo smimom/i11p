@@ -48,8 +48,27 @@ class App < Sinatra::Base
 
     def get_reservations(schedule)
       # N+1 query 
-      reservations = db.xquery('SELECT * FROM `reservations` WHERE `schedule_id` = ?', schedule[:id]).map do |reservation|
-        reservation[:user] = get_user(reservation[:user_id])
+      # reservations = db.xquery('SELECT * FROM `reservations` WHERE `schedule_id` = ?', schedule[:id]).map do |reservation|
+      reservations = db.xquery(
+        (
+          'SELECT ' +
+          'reservations.id as r_id, reservations.schedule_id as r_schedule_id, reservations.user_id as r_user_id, reservations.created_at as r_created_at, ' +
+          'users.id as u_id, users.email as u_email, users.nickname as u_nickname, users.staff as u_staff, users.created_at as u_created_at' +
+          ' FROM `reservations` INNER JOIN `users` ON `users`.`id` = `reservations`.`user_id` ' +
+          ' WHERE `schedule_id` = ?'
+        ),
+        schedule[:id]
+      ).map do |reservation|
+        user = {}
+        reservation.keys.each do |key|
+          if key.start_with?('r_')
+            reservation[key[2..]] = reservation.delete(key)
+          else
+            user[key[2..]] = reservation.delete(key)
+          end
+        end
+        user[:email] = '' if !current_user || !current_user[:staff]
+        reservation[:user] = user
         reservation
       end
       schedule[:reservations] = reservations
